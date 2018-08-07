@@ -86,6 +86,46 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./frontend/actions/bench_actions.js":
+/*!*******************************************!*\
+  !*** ./frontend/actions/bench_actions.js ***!
+  \*******************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.fetchBenches = exports.RECEIVE_BENCHES = undefined;
+
+var _bench_api_util = __webpack_require__(/*! ../util/bench_api_util */ "./frontend/util/bench_api_util.js");
+
+var BenchAPIUtil = _interopRequireWildcard(_bench_api_util);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+var RECEIVE_BENCHES = exports.RECEIVE_BENCHES = 'RECEIVE_BENCHES';
+
+var receiveBenches = function receiveBenches(benches) {
+  return {
+    type: RECEIVE_BENCHES,
+    benches: benches
+  };
+};
+
+var fetchBenches = exports.fetchBenches = function fetchBenches() {
+  return function (dispatch) {
+    return BenchAPIUtil.fetchBenches().then(function (benches) {
+      return dispatch(receiveBenches(benches));
+    });
+  };
+};
+
+/***/ }),
+
 /***/ "./frontend/actions/session_actions.js":
 /*!*********************************************!*\
   !*** ./frontend/actions/session_actions.js ***!
@@ -114,7 +154,7 @@ var RECEIVE_ERRORS = exports.RECEIVE_ERRORS = 'RECEIVE_ERRORS';
 var receiveCurrentUser = function receiveCurrentUser(user) {
   return {
     type: RECEIVE_CURRENT_USER,
-    user: user
+    currentUser: user
   };
 };
 
@@ -185,17 +225,34 @@ var _store2 = _interopRequireDefault(_store);
 
 var _session_actions = __webpack_require__(/*! ./actions/session_actions */ "./frontend/actions/session_actions.js");
 
+var _bench_actions = __webpack_require__(/*! ./actions/bench_actions */ "./frontend/actions/bench_actions.js");
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 document.addEventListener('DOMContentLoaded', function () {
   var root = document.getElementById('root');
-  var store = (0, _store2.default)();
 
+  var store = (0, _store2.default)();
   window.getState = store.getState;
   window.dispatch = store.dispatch;
   window.login = _session_actions.login;
   window.signup = _session_actions.signup;
   window.logout = _session_actions.logout;
+  window.fetchBenches = _bench_actions.fetchBenches;
+
+  if (window.currentUser) {
+    var preloadedState = {
+      entities: {
+        users: _defineProperty({}, window.currentUser.id, window.currentUser)
+      },
+      session: { id: window.currentUser.id }
+    };
+    store = (0, _store2.default)(preloadedState);
+    delete window.currentUser;
+  }
+
   _reactDom2.default.render(_react2.default.createElement(_root2.default, { store: store }), root);
 });
 
@@ -223,6 +280,22 @@ var _greeting_container = __webpack_require__(/*! ./greeting/greeting_container 
 
 var _greeting_container2 = _interopRequireDefault(_greeting_container);
 
+var _reactRouterDom = __webpack_require__(/*! react-router-dom */ "./node_modules/react-router-dom/es/index.js");
+
+var _LoginFormContainer = __webpack_require__(/*! ./login/LoginFormContainer */ "./frontend/components/login/LoginFormContainer.js");
+
+var _LoginFormContainer2 = _interopRequireDefault(_LoginFormContainer);
+
+var _SignupFormContainer = __webpack_require__(/*! ./login/SignupFormContainer */ "./frontend/components/login/SignupFormContainer.js");
+
+var _SignupFormContainer2 = _interopRequireDefault(_SignupFormContainer);
+
+var _route_util = __webpack_require__(/*! ../util/route_util */ "./frontend/util/route_util.jsx");
+
+var _bench_index_container = __webpack_require__(/*! ./benches/bench_index_container */ "./frontend/components/benches/bench_index_container.js");
+
+var _bench_index_container2 = _interopRequireDefault(_bench_index_container);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var App = function App() {
@@ -238,11 +311,128 @@ var App = function App() {
         'Bench BnB'
       ),
       _react2.default.createElement(_greeting_container2.default, null)
+    ),
+    _react2.default.createElement(
+      _reactRouterDom.Switch,
+      null,
+      _react2.default.createElement(_route_util.AuthRoute, { exact: true, path: '/login', component: _LoginFormContainer2.default }),
+      _react2.default.createElement(_route_util.AuthRoute, { exact: true, path: '/signup', component: _SignupFormContainer2.default }),
+      _react2.default.createElement(_reactRouterDom.Route, { exact: true, path: '/', component: _bench_index_container2.default })
     )
   );
 };
 
 exports.default = App;
+
+/***/ }),
+
+/***/ "./frontend/components/benches/bench_index.jsx":
+/*!*****************************************************!*\
+  !*** ./frontend/components/benches/bench_index.jsx ***!
+  \*****************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _react = __webpack_require__(/*! react */ "./node_modules/react/index.js");
+
+var _react2 = _interopRequireDefault(_react);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var BenchIndex = function (_React$Component) {
+  _inherits(BenchIndex, _React$Component);
+
+  function BenchIndex() {
+    _classCallCheck(this, BenchIndex);
+
+    return _possibleConstructorReturn(this, (BenchIndex.__proto__ || Object.getPrototypeOf(BenchIndex)).apply(this, arguments));
+  }
+
+  _createClass(BenchIndex, [{
+    key: 'componentDidMount',
+    value: function componentDidMount() {
+      this.props.fetchBenches();
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var allBenches = this.props.benches.map(function (bench) {
+        return _react2.default.createElement(
+          'ul',
+          { key: bench.id },
+          bench.description
+        );
+      });
+
+      return _react2.default.createElement(
+        'div',
+        null,
+        allBenches
+      );
+    }
+  }]);
+
+  return BenchIndex;
+}(_react2.default.Component);
+
+exports.default = BenchIndex;
+
+/***/ }),
+
+/***/ "./frontend/components/benches/bench_index_container.js":
+/*!**************************************************************!*\
+  !*** ./frontend/components/benches/bench_index_container.js ***!
+  \**************************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _bench_index = __webpack_require__(/*! ./bench_index */ "./frontend/components/benches/bench_index.jsx");
+
+var _bench_index2 = _interopRequireDefault(_bench_index);
+
+var _bench_actions = __webpack_require__(/*! ../../actions/bench_actions */ "./frontend/actions/bench_actions.js");
+
+var _reactRedux = __webpack_require__(/*! react-redux */ "./node_modules/react-redux/es/index.js");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var mapStateToProps = function mapStateToProps(state) {
+  return {
+    benches: Object.values(state.entities.benches)
+  };
+};
+
+var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+  return {
+    fetchBenches: function fetchBenches() {
+      return dispatch((0, _bench_actions.fetchBenches)());
+    }
+  };
+};
+
+exports.default = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_bench_index2.default);
 
 /***/ }),
 
@@ -260,8 +450,6 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
 var _react = __webpack_require__(/*! react */ "./node_modules/react/index.js");
 
 var _react2 = _interopRequireDefault(_react);
@@ -270,59 +458,48 @@ var _reactRouterDom = __webpack_require__(/*! react-router-dom */ "./node_module
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+var Greeting = function Greeting(_ref) {
+  var currentUser = _ref.currentUser,
+      logout = _ref.logout;
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var Greeting = function (_React$Component) {
-  _inherits(Greeting, _React$Component);
-
-  function Greeting(props) {
-    _classCallCheck(this, Greeting);
-
-    return _possibleConstructorReturn(this, (Greeting.__proto__ || Object.getPrototypeOf(Greeting)).call(this, props));
-  }
-
-  _createClass(Greeting, [{
-    key: 'render',
-    value: function render() {
-      var currentUser = this.props.currentUser;
-
-      var display = currentUser ? _react2.default.createElement(
-        'div',
-        null,
+  var sessionLinks = function sessionLinks() {
+    return _react2.default.createElement(
+      'nav',
+      { className: 'login-signup' },
+      _react2.default.createElement(
+        _reactRouterDom.Link,
+        { to: '/login' },
+        'Login'
+      ),
+      '\xA0or\xA0',
+      _react2.default.createElement(
+        _reactRouterDom.Link,
+        { to: '/signup' },
+        'Sign up!'
+      )
+    );
+  };
+  var personalGreeting = function personalGreeting() {
+    return _react2.default.createElement(
+      'hgroup',
+      { className: 'header-group' },
+      _react2.default.createElement(
+        'h2',
+        { className: 'header-name' },
+        'Hi, ',
         currentUser.username,
-        _react2.default.createElement(
-          'button',
-          { onClick: this.props.logout },
-          'Log Out!'
-        )
-      ) : _react2.default.createElement(
-        'div',
-        null,
-        _react2.default.createElement(
-          _reactRouterDom.Link,
-          { to: '/signup' },
-          'Sign Up!'
-        ),
-        _react2.default.createElement(
-          _reactRouterDom.Link,
-          { to: '/login' },
-          'Log In!'
-        )
-      );
-      return _react2.default.createElement(
-        'div',
-        null,
-        display
-      );
-    }
-  }]);
+        '!'
+      ),
+      _react2.default.createElement(
+        'button',
+        { className: 'header-button', onClick: logout },
+        'Log Out'
+      )
+    );
+  };
 
-  return Greeting;
-}(_react2.default.Component);
+  return currentUser ? personalGreeting() : sessionLinks();
+};
 
 exports.default = Greeting;
 
@@ -342,19 +519,22 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _greeting = __webpack_require__(/*! ./greeting */ "./frontend/components/greeting/greeting.jsx");
-
-var _greeting2 = _interopRequireDefault(_greeting);
-
 var _reactRedux = __webpack_require__(/*! react-redux */ "./node_modules/react-redux/es/index.js");
 
 var _session_actions = __webpack_require__(/*! ../../actions/session_actions */ "./frontend/actions/session_actions.js");
 
+var _greeting = __webpack_require__(/*! ./greeting */ "./frontend/components/greeting/greeting.jsx");
+
+var _greeting2 = _interopRequireDefault(_greeting);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var mapStateToProps = function mapStateToProps(state) {
+var mapStateToProps = function mapStateToProps(_ref) {
+  var session = _ref.session,
+      users = _ref.entities.users;
+
   return {
-    currentUser: state.session.currentUser
+    currentUser: users[session.id]
   };
 };
 
@@ -367,6 +547,224 @@ var mapDispatchToProps = function mapDispatchToProps(dispatch) {
 };
 
 exports.default = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_greeting2.default);
+
+/***/ }),
+
+/***/ "./frontend/components/login/LoginFormContainer.js":
+/*!*********************************************************!*\
+  !*** ./frontend/components/login/LoginFormContainer.js ***!
+  \*********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _session_actions = __webpack_require__(/*! ../../actions/session_actions */ "./frontend/actions/session_actions.js");
+
+var _reactRedux = __webpack_require__(/*! react-redux */ "./node_modules/react-redux/es/index.js");
+
+var _SessionForm = __webpack_require__(/*! ./SessionForm */ "./frontend/components/login/SessionForm.jsx");
+
+var _SessionForm2 = _interopRequireDefault(_SessionForm);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var mapStateToProps = function mapStateToProps(state, ownProps) {
+  return {
+    errors: state.errors.session,
+    formType: 'Log In'
+  };
+};
+
+var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+  return {
+    processForm: function processForm(user) {
+      return dispatch((0, _session_actions.login)(user));
+    }
+  };
+};
+
+exports.default = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_SessionForm2.default);
+
+/***/ }),
+
+/***/ "./frontend/components/login/SessionForm.jsx":
+/*!***************************************************!*\
+  !*** ./frontend/components/login/SessionForm.jsx ***!
+  \***************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _reactRouterDom = __webpack_require__(/*! react-router-dom */ "./node_modules/react-router-dom/es/index.js");
+
+var _react = __webpack_require__(/*! react */ "./node_modules/react/index.js");
+
+var _react2 = _interopRequireDefault(_react);
+
+var _reactRouter = __webpack_require__(/*! react-router */ "./node_modules/react-router/es/index.js");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var SessionForm = function (_React$Component) {
+  _inherits(SessionForm, _React$Component);
+
+  function SessionForm(props) {
+    _classCallCheck(this, SessionForm);
+
+    var _this = _possibleConstructorReturn(this, (SessionForm.__proto__ || Object.getPrototypeOf(SessionForm)).call(this, props));
+
+    _this.state = {
+      username: "",
+      password: ""
+    };
+    _this.handleSubmit = _this.handleSubmit.bind(_this);
+    return _this;
+  }
+
+  _createClass(SessionForm, [{
+    key: 'update',
+    value: function update(field) {
+      var _this2 = this;
+
+      return function (e) {
+        return _this2.setState(_defineProperty({}, field, e.target.value));
+      };
+    }
+  }, {
+    key: 'handleSubmit',
+    value: function handleSubmit(e) {
+      e.preventDefault();
+      var user = Object.assign({}, this.state);
+      this.props.processForm(user);
+    }
+  }, {
+    key: 'render',
+    value: function render() {
+      var link = _react2.default.createElement(
+        _reactRouterDom.Link,
+        { to: '/signup' },
+        ' Sign Up'
+      );
+      if (this.props.formType === "Sign Up") {
+        link = _react2.default.createElement(
+          _reactRouterDom.Link,
+          { to: '/login' },
+          'Log In'
+        );
+      }
+
+      var errors = this.props.errors.map(function (er, idx) {
+        return _react2.default.createElement(
+          'ul',
+          { key: idx },
+          'er'
+        );
+      });
+      return _react2.default.createElement(
+        'div',
+        null,
+        _react2.default.createElement(
+          'h3',
+          null,
+          this.props.formType
+        ),
+        _react2.default.createElement(
+          'form',
+          { onSubmit: this.handleSubmit },
+          _react2.default.createElement(
+            'label',
+            null,
+            'Username',
+            _react2.default.createElement('input', { type: 'text',
+              value: this.state.username,
+              onChange: this.update('username') })
+          ),
+          _react2.default.createElement('br', null),
+          _react2.default.createElement(
+            'label',
+            null,
+            'Password',
+            _react2.default.createElement('input', { type: 'text',
+              value: this.state.password,
+              onChange: this.update('password') })
+          ),
+          _react2.default.createElement('br', null),
+          _react2.default.createElement('input', { type: 'submit', value: this.props.formType })
+        ),
+        link
+      );
+    }
+  }]);
+
+  return SessionForm;
+}(_react2.default.Component);
+
+exports.default = (0, _reactRouter.withRouter)(SessionForm);
+
+/***/ }),
+
+/***/ "./frontend/components/login/SignupFormContainer.js":
+/*!**********************************************************!*\
+  !*** ./frontend/components/login/SignupFormContainer.js ***!
+  \**********************************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _session_actions = __webpack_require__(/*! ../../actions/session_actions */ "./frontend/actions/session_actions.js");
+
+var _SessionForm = __webpack_require__(/*! ./SessionForm */ "./frontend/components/login/SessionForm.jsx");
+
+var _SessionForm2 = _interopRequireDefault(_SessionForm);
+
+var _reactRedux = __webpack_require__(/*! react-redux */ "./node_modules/react-redux/es/index.js");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var mapStateToProps = function mapStateToProps(state, ownProps) {
+  return {
+    formType: 'Sign Up',
+    errors: state.errors.session
+  };
+};
+
+var mapDispatchToProps = function mapDispatchToProps(dispatch) {
+  return {
+    processForm: function processForm(user) {
+      return dispatch((0, _session_actions.signup)(user));
+    }
+  };
+};
+
+exports.default = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(_SessionForm2.default);
 
 /***/ }),
 
@@ -415,6 +813,39 @@ exports.default = Root;
 
 /***/ }),
 
+/***/ "./frontend/reducers/bench_reducer.js":
+/*!********************************************!*\
+  !*** ./frontend/reducers/bench_reducer.js ***!
+  \********************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _bench_actions = __webpack_require__(/*! ../actions/bench_actions */ "./frontend/actions/bench_actions.js");
+
+var benchReducer = function benchReducer() {
+  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+  var action = arguments[1];
+
+  Object.freeze(state);
+  switch (action.type) {
+    case _bench_actions.RECEIVE_BENCHES:
+      return action.benches;
+    default:
+      return state;
+  }
+};
+
+exports.default = benchReducer;
+
+/***/ }),
+
 /***/ "./frontend/reducers/entities_reducer.js":
 /*!***********************************************!*\
   !*** ./frontend/reducers/entities_reducer.js ***!
@@ -435,10 +866,15 @@ var _users_reducer2 = _interopRequireDefault(_users_reducer);
 
 var _redux = __webpack_require__(/*! redux */ "./node_modules/redux/es/redux.js");
 
+var _bench_reducer = __webpack_require__(/*! ./bench_reducer */ "./frontend/reducers/bench_reducer.js");
+
+var _bench_reducer2 = _interopRequireDefault(_bench_reducer);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var entitiesReducer = (0, _redux.combineReducers)({
-  users: _users_reducer2.default
+  users: _users_reducer2.default,
+  benches: _bench_reducer2.default
 });
 
 exports.default = entitiesReducer;
@@ -566,24 +1002,26 @@ Object.defineProperty(exports, "__esModule", {
 
 var _session_actions = __webpack_require__(/*! ../actions/session_actions */ "./frontend/actions/session_actions.js");
 
-var _nullSession = {
-  currentUser: null
-};
+var _nullUser = Object.freeze({
+  id: null
+});
 
-exports.default = function () {
-  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _nullSession;
+var sessionReducer = function sessionReducer() {
+  var state = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : _nullUser;
   var action = arguments[1];
 
   Object.freeze(state);
   switch (action.type) {
     case _session_actions.RECEIVE_CURRENT_USER:
-      return Object.assign({}, { currentUser: action.user });
+      return { id: action.currentUser.id };
     case _session_actions.LOGOUT_CURRENT_USER:
-      return _nullSession;
+      return _nullUser;
     default:
       return state;
   }
 };
+
+exports.default = sessionReducer;
 
 /***/ }),
 
@@ -618,7 +1056,7 @@ exports.default = function () {
   Object.freeze(state);
   switch (action.type) {
     case _session_actions.RECEIVE_CURRENT_USER:
-      return (0, _merge3.default)({}, state, _defineProperty({}, action.user.id, action.user));
+      return (0, _merge3.default)({}, state, _defineProperty({}, action.currentUser.id, action.currentUser));
     default:
       return state;
   }
@@ -662,6 +1100,83 @@ var configureStore = function configureStore() {
 };
 
 exports.default = configureStore;
+
+/***/ }),
+
+/***/ "./frontend/util/bench_api_util.js":
+/*!*****************************************!*\
+  !*** ./frontend/util/bench_api_util.js ***!
+  \*****************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+var fetchBenches = exports.fetchBenches = function fetchBenches() {
+  return $.ajax({
+    method: 'GET',
+    url: '/api/benches'
+  });
+};
+
+/***/ }),
+
+/***/ "./frontend/util/route_util.jsx":
+/*!**************************************!*\
+  !*** ./frontend/util/route_util.jsx ***!
+  \**************************************/
+/*! no static exports found */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ProtectedRoute = exports.AuthRoute = undefined;
+
+var _react = __webpack_require__(/*! react */ "./node_modules/react/index.js");
+
+var _react2 = _interopRequireDefault(_react);
+
+var _reactRedux = __webpack_require__(/*! react-redux */ "./node_modules/react-redux/es/index.js");
+
+var _reactRouterDom = __webpack_require__(/*! react-router-dom */ "./node_modules/react-router-dom/es/index.js");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var Auth = function Auth(_ref) {
+  var Component = _ref.component,
+      path = _ref.path,
+      loggedIn = _ref.loggedIn,
+      exact = _ref.exact;
+  return _react2.default.createElement(_reactRouterDom.Route, { path: path, exact: exact, render: function render(props) {
+      return !loggedIn ? _react2.default.createElement(Component, props) : _react2.default.createElement(_reactRouterDom.Redirect, { to: '/' });
+    } });
+};
+
+var Protected = function Protected(_ref2) {
+  var Component = _ref2.component,
+      path = _ref2.path,
+      loggedIn = _ref2.loggedIn,
+      exact = _ref2.exact;
+  return _react2.default.createElement(_reactRouterDom.Route, { path: path, exact: exact, render: function render(props) {
+      return loggedIn ? _react2.default.createElement(Component, props) : _react2.default.createElement(_reactRouterDom.Redirect, { to: '/login' });
+    } });
+};
+
+var mapStateToProps = function mapStateToProps(state) {
+  return { loggedIn: Boolean(state.session.id) };
+};
+
+var AuthRoute = exports.AuthRoute = (0, _reactRouterDom.withRouter)((0, _reactRedux.connect)(mapStateToProps)(Auth));
+
+var ProtectedRoute = exports.ProtectedRoute = (0, _reactRouterDom.withRouter)((0, _reactRedux.connect)(mapStateToProps)(Protected));
 
 /***/ }),
 
@@ -28028,6 +28543,68 @@ var generatePath = function generatePath() {
 };
 
 /* harmony default export */ __webpack_exports__["default"] = (generatePath);
+
+/***/ }),
+
+/***/ "./node_modules/react-router/es/index.js":
+/*!***********************************************!*\
+  !*** ./node_modules/react-router/es/index.js ***!
+  \***********************************************/
+/*! exports provided: MemoryRouter, Prompt, Redirect, Route, Router, StaticRouter, Switch, generatePath, matchPath, withRouter */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony import */ var _MemoryRouter__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./MemoryRouter */ "./node_modules/react-router/es/MemoryRouter.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "MemoryRouter", function() { return _MemoryRouter__WEBPACK_IMPORTED_MODULE_0__["default"]; });
+
+/* harmony import */ var _Prompt__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./Prompt */ "./node_modules/react-router/es/Prompt.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "Prompt", function() { return _Prompt__WEBPACK_IMPORTED_MODULE_1__["default"]; });
+
+/* harmony import */ var _Redirect__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./Redirect */ "./node_modules/react-router/es/Redirect.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "Redirect", function() { return _Redirect__WEBPACK_IMPORTED_MODULE_2__["default"]; });
+
+/* harmony import */ var _Route__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ./Route */ "./node_modules/react-router/es/Route.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "Route", function() { return _Route__WEBPACK_IMPORTED_MODULE_3__["default"]; });
+
+/* harmony import */ var _Router__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ./Router */ "./node_modules/react-router/es/Router.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "Router", function() { return _Router__WEBPACK_IMPORTED_MODULE_4__["default"]; });
+
+/* harmony import */ var _StaticRouter__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ./StaticRouter */ "./node_modules/react-router/es/StaticRouter.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "StaticRouter", function() { return _StaticRouter__WEBPACK_IMPORTED_MODULE_5__["default"]; });
+
+/* harmony import */ var _Switch__WEBPACK_IMPORTED_MODULE_6__ = __webpack_require__(/*! ./Switch */ "./node_modules/react-router/es/Switch.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "Switch", function() { return _Switch__WEBPACK_IMPORTED_MODULE_6__["default"]; });
+
+/* harmony import */ var _generatePath__WEBPACK_IMPORTED_MODULE_7__ = __webpack_require__(/*! ./generatePath */ "./node_modules/react-router/es/generatePath.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "generatePath", function() { return _generatePath__WEBPACK_IMPORTED_MODULE_7__["default"]; });
+
+/* harmony import */ var _matchPath__WEBPACK_IMPORTED_MODULE_8__ = __webpack_require__(/*! ./matchPath */ "./node_modules/react-router/es/matchPath.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "matchPath", function() { return _matchPath__WEBPACK_IMPORTED_MODULE_8__["default"]; });
+
+/* harmony import */ var _withRouter__WEBPACK_IMPORTED_MODULE_9__ = __webpack_require__(/*! ./withRouter */ "./node_modules/react-router/es/withRouter.js");
+/* harmony reexport (safe) */ __webpack_require__.d(__webpack_exports__, "withRouter", function() { return _withRouter__WEBPACK_IMPORTED_MODULE_9__["default"]; });
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /***/ }),
 
